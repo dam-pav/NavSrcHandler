@@ -1,0 +1,10 @@
+{
+  "WorkingFolder": "C:\\Projects\\MDM\\DN25-55506 FMG uskladiščevanje istega artikla v isto kaseto\\_staging\\250822",
+  "SourceTypes": [
+    "BSE",
+    "DEV",
+    "DLY",
+    "PRD",
+    "TST"
+  ]
+}
