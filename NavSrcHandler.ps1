@@ -31,28 +31,28 @@ $script:GitAvailable = $false
 $script:GitUpdateAvailable = $false
 $script:GitBehindCount = 0
 $script:GitBranch = 'main'
-try {
-    $repoRoot = $PSScriptRoot
-    $gitVersion = $(git --version)
-    if ($gitVersion) {
-        $script:GitAvailable = $true
-        $originUrl = $(git -C "$repoRoot" remote get-url origin)
-        if ($originUrl) {
-            # Determine current branch, default to 'main' if unknown
-            $branch = $(git -C "$repoRoot" rev-parse --abbrev-ref HEAD)
-            if (-not [string]::IsNullOrWhiteSpace($branch)) { $script:GitBranch = $branch }
-            # Fetch and compute behind count against origin/<branch>
-            git -C "$repoRoot" fetch origin | Out-Null
-            $behindCountRaw = $(git -C "$repoRoot" rev-list HEAD..origin/$($script:GitBranch) --count)
-            Write-Host "[DEBUG] git rev-list HEAD..origin/$($script:GitBranch) --count output: '$behindCountRaw'" -ForegroundColor DarkGray
-            $behindCount = 0
-            if ($behindCountRaw -and ($behindCountRaw -match '^\d+$')) { $behindCount = [int]$behindCountRaw }
-            Write-Host "[DEBUG] Parsed behindCount: $behindCount" -ForegroundColor DarkGray
-            $script:GitBehindCount = $behindCount
-            $script:GitUpdateAvailable = ($behindCount -gt 0)
+$repoRoot = $PSScriptRoot
+if (Test-Path -LiteralPath (Join-Path $repoRoot '.git')) {
+    try {
+        $gitVersion = $(git --version)
+        if ($gitVersion) {
+            $script:GitAvailable = $true
+            $originUrl = $(git -C "$repoRoot" remote get-url origin)
+            if ($originUrl) {
+                # Determine current branch, default to 'main' if unknown
+                $branch = $(git -C "$repoRoot" rev-parse --abbrev-ref HEAD)
+                if (-not [string]::IsNullOrWhiteSpace($branch)) { $script:GitBranch = $branch }
+                # Fetch and compute behind count against origin/<branch>
+                git -C "$repoRoot" fetch origin | Out-Null
+                $behindCountRaw = $(git -C "$repoRoot" rev-list HEAD..origin/$($script:GitBranch) --count)
+                $behindCount = 0
+                if ($behindCountRaw -and ($behindCountRaw -match '^\d+$')) { $behindCount = [int]$behindCountRaw }
+                $script:GitBehindCount = $behindCount
+                $script:GitUpdateAvailable = ($behindCount -gt 0)
+            }
         }
-    }
-} catch {}
+    } catch {}
+}
 # endregion
 
 # region Settings
