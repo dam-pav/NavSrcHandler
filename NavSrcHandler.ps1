@@ -29,18 +29,27 @@ $ErrorActionPreference = 'Stop'
 # region Git update check (run once at script start)
 $script:GitAvailable = $false
 $script:GitUpdateAvailable = $false
+$script:GitBehindCount = 0
+$script:GitBranch = 'main'
 try {
-    $gitVersion = git --version 2>$null
-    if ($LASTEXITCODE -eq 0) {
+    $repoRoot = $PSScriptRoot
+    $gitVersion = $(git --version)
+    if ($gitVersion) {
         $script:GitAvailable = $true
-        $originUrl = git remote get-url origin 2>$null
-        if ($LASTEXITCODE -eq 0 -and $originUrl) {
-            git fetch origin 2>$null
-            $behindCount = git rev-list HEAD..origin/main --count 2>$null
-            if ($behindCount -and ($behindCount -as [int]) -gt 0) {
-                $script:GitUpdateAvailable = $true
-                $script:GitBehindCount = $behindCount
-            }
+        $originUrl = $(git -C "$repoRoot" remote get-url origin)
+        if ($originUrl) {
+            # Determine current branch, default to 'main' if unknown
+            $branch = $(git -C "$repoRoot" rev-parse --abbrev-ref HEAD)
+            if (-not [string]::IsNullOrWhiteSpace($branch)) { $script:GitBranch = $branch }
+            # Fetch and compute behind count against origin/<branch>
+            git -C "$repoRoot" fetch origin | Out-Null
+            $behindCountRaw = $(git -C "$repoRoot" rev-list HEAD..origin/$($script:GitBranch) --count)
+            Write-Host "[DEBUG] git rev-list HEAD..origin/$($script:GitBranch) --count output: '$behindCountRaw'" -ForegroundColor DarkGray
+            $behindCount = 0
+            if ($behindCountRaw -and ($behindCountRaw -match '^\d+$')) { $behindCount = [int]$behindCountRaw }
+            Write-Host "[DEBUG] Parsed behindCount: $behindCount" -ForegroundColor DarkGray
+            $script:GitBehindCount = $behindCount
+            $script:GitUpdateAvailable = ($behindCount -gt 0)
         }
     }
 } catch {}
@@ -519,7 +528,7 @@ function Invoke-Menu {
         if ($offerAddPath) { Write-Host '6) Add host folder to path' }
 
         if ($script:GitAvailable -and $script:GitUpdateAvailable) {
-            Write-Host ("7) Pull latest update from origin/main (" + $script:GitBehindCount + " commit(s) behind)") -ForegroundColor Yellow
+            Write-Host ("7) Pull latest update from origin/" + $script:GitBranch + " (" + $script:GitBehindCount + " commit(s) behind)") -ForegroundColor Yellow
         }
         Write-Host '0) Exit'
 
@@ -545,8 +554,15 @@ function Invoke-Menu {
             }
             '7' {
                 if ($script:GitAvailable -and $script:GitUpdateAvailable) {
-                    Write-Host 'Pulling latest updates from origin/main...'
-                    git pull origin main
+                    Write-Host ("Pulling latest updates from origin/" + $script:GitBranch + "...")
+                    git -C "$PSScriptRoot" pull origin $script:GitBranch
+                    # Refresh behind count after pull
+                    git -C "$PSScriptRoot" fetch origin | Out-Null
+                    $behindCountRaw = $(git -C "$PSScriptRoot" rev-list HEAD..origin/$($script:GitBranch) --count)
+                    $behindCount = 0
+                    if ($behindCountRaw -and ($behindCountRaw -match '^\d+$')) { $behindCount = [int]$behindCountRaw }
+                    $script:GitBehindCount = $behindCount
+                    $script:GitUpdateAvailable = ($behindCount -gt 0)
                 } else {
                     Write-Host 'No updates available to pull.' -ForegroundColor Green
                 }
