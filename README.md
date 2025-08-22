@@ -88,7 +88,7 @@ Example:
 ## Typical Workflow
 
 1. Option 1: set the working folder where `PRD.txt`, `DLY.txt`, etc. live.
-2. Option 2: confirm the set of source codes you care about.
+2. Option 2: confirm the set of source codes you care about...
 3. Option 3 (optional): Inspect — see object IDs per type for a selected source.
 4. Option 4: Prepare — performs splitting and seeds merge folders.
 5. Make any manual edits in `MRG2XXX/` as needed.
