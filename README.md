@@ -1,6 +1,6 @@
 # NAV Source Handler (Split/Merge Tool)
 
-An interactive PowerShell helper that prepares and merges Microsoft Dynamics NAV/BC application object files.
+An interactive PowerShell helper that prepares and merges Microsoft Dynamics NAV/BC application object files. The purpose of this tool is to facilitate the [Nav Development Protocol](The Nav Development Protocol.md).
 
 ## Features
 
@@ -40,7 +40,7 @@ If the path is not yet part of environment, the menu will show a sixth option. S
 
 ### Removing the tool
 
-If you find this tool is not what you want you will want to remove it. 
+If you find this tool is not what you want you will want to remove it.
 
 1. Clear the folder from the environment path using `RemoveFolderFromPath.ps1`.
 2. Remove the folder and its contents. That's it.
