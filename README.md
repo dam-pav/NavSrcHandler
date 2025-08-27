@@ -4,12 +4,11 @@ An interactive PowerShell helper that prepares and merges Microsoft Dynamics NAV
 
 ## Features
 
-- Set a working folder (persisted)
 - Manage 3-letter source type codes (e.g., `DLY`, `PRD`, `DEV`, `TST`, `BSE`) (persisted)
-- Inspect: pick an available source (from existing `<CODE>.txt` in the working folder) and print pipe-separated IDs grouped by object type
+- Inspect: pick an available source (from existing `<CODE>.txt` in the current working folder) and print pipe-separated IDs grouped by object type
 - Prepare: split `<CODE>.txt` into `<WORKING>/<CODE>/` and seed `<WORKING>/MRG2<CODE>/`
 - Merge: join `<WORKING>/MRG2<CODE>/*.txt` into `<WORKING>/MRG2<CODE>.txt`
-- Menu-driven, settings saved to `settings.json` (JSON content). The file is created on first change (e.g., after setting working folder or codes).
+- Menu-driven, settings saved to `settings.json` (JSON content). The file is created on first change.
 - Conditional utility: add the script's host folder to the User PATH (shows only if it's not already on PATH)
 
 ## Requirements
@@ -47,24 +46,21 @@ If you find this tool is not what you want you will want to remove it.
 
 ## Usage (Menu)
 
-1. Set working folder
-   - Choose or create the folder that contains your source files like `PRD.txt`, `DLY.txt`, etc.
-   - This path is saved in `settings.json`.
-2. Manage source types
+1. Manage source types
    - Add or remove 3-letter codes (e.g., `PRD`, `DLY`, `DEV`, `TST`, `BSE`).
    - Saved in `settings.json`.
-3. Inspect source IDs (pipe-per-type)
+2. Inspect source IDs (pipe-per-type)
 
-- Lists only the source codes for which `<CODE>.txt` exists in the working folder.
+- Lists only the source codes for which `<CODE>.txt` exists in the current working folder.
 - After you pick a source, parses the file and prints one line per object type with IDs pipe-separated, e.g. `Table: 18|27|36`.
 
-4. Prepare (split + seed merge folders)
+3. Prepare (split + seed merge folders)
    - For each selected code `XXX`:
      - Split `XXX.txt` into `./XXX/` using `Split-NAVApplicationObjectFile`.
      - Copy contents to `./MRG2XXX/`.
-5. Merge (MRG2 `<CODE>`/*.txt -> MRG2 `<CODE>`.txt)
+4. Merge (MRG2 `<CODE>`/*.txt -> MRG2 `<CODE>`.txt)
    - For each selected code `XXX`, join files in `./MRG2XXX/` to `./MRG2XXX.txt` using `Join-NAVApplicationObjectFile`.
-6. Add host folder to PATH (conditional)
+5. Add host folder to PATH (conditional)
 
 - Appears only when the script's folder isn't already on PATH.
 - Adds the folder to the User PATH and updates the current session PATH for immediate use.
@@ -73,32 +69,28 @@ If you find this tool is not what you want you will want to remove it.
 
 - Settings are stored next to the script in `settings.json` (JSON content). The file is created on first change.
 - Keys:
-  - `WorkingFolder`: absolute path to your working directory.
   - `SourceTypes`: array of 3-letter codes.
 
 Example:
 
 ```json
 {
-  "WorkingFolder": "C:\\Projects\\Work\\MyObjects",
   "SourceTypes": ["DLY", "PRD", "DEV", "TST", "BSE"]
 }
 ```
 
 ## Typical Workflow
 
-1. Option 1: set the working folder where `PRD.txt`, `DLY.txt`, etc. live.
-2. Option 2: confirm the set of source codes you care about.
-3. Option 3 (optional): Inspect — see object IDs per type for a selected source.
-4. Option 4: Prepare — performs splitting and seeds merge folders.
-5. Make any manual edits in `MRG2XXX/` as needed.
-6. Option 5: Merge — produces `MRG2XXX.txt` outputs.
+1. Option 1 : Inspect — see object IDs per type for a selected source.
+2. Option 2: Prepare — performs splitting and seeds merge folders.
+3. Make any manual edits in `MRG2XXX/` as needed.
+4. Option 3: Merge — produces `MRG2XXX.txt` outputs.
 
 ## Troubleshooting
 
 - "NAV cmdlets not found": ensure you are running in a NAV/BC Dev Shell or that the module providing `Split-NAVApplicationObjectFile` and `Join-NAVApplicationObjectFile` is imported.
-- Missing source file: the tool skips a code if `CODE.txt` isn’t present in the working folder.
-- Permissions: run PowerShell with sufficient rights to create directories and files in the working folder.
+- Missing source file: the tool skips a code if `CODE.txt` isn’t present in the current working folder.
+- Permissions: run PowerShell with sufficient rights to create directories and files in the working folder where you run the tool.
 
 ## Notes
 

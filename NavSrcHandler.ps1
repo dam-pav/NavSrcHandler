@@ -18,9 +18,7 @@
   - If NAV cmdlets are not available, the tool will warn and skip split/merge.
 #>
 
-param(
-    [switch]$Menu = $true
-)
+param()
 
 
 Set-StrictMode -Version Latest
@@ -60,8 +58,7 @@ $script:SettingsPath = Join-Path $PSScriptRoot 'settings.json'   # JSON settings
 
 function New-DefaultSettings {
     [pscustomobject]@{
-        WorkingFolder = (Get-Location).Path
-        SourceTypes   = @('DLY','PRD','DEV','TST','BSE')
+        SourceTypes = @('DLY','PRD','DEV','TST','BSE')
     }
 }
 
@@ -72,8 +69,7 @@ function Get-Settings {
             if ([string]::IsNullOrWhiteSpace($raw)) { return New-DefaultSettings }
             $obj = $raw | ConvertFrom-Json -ErrorAction Stop
             # Ensure mandatory fields
-            if (-not $obj.WorkingFolder) { $obj.WorkingFolder = (Get-Location).Path }
-            if (-not $obj.SourceTypes)   { $obj.SourceTypes   = @('DLY','PRD','DEV','TST','BSE') }
+            if (-not $obj.SourceTypes) { $obj.SourceTypes = @('DLY','PRD','DEV','TST','BSE') }
             return [pscustomobject]$obj
         }
         catch {
@@ -186,7 +182,7 @@ function Get-ExistingTxt([string]$folder, [string]$pattern) {
 # Return list of available source files based on current settings (only those that exist)
 function Get-AvailableSourceFiles {
     param([object]$settings)
-    $root = $settings.WorkingFolder
+    $root = (Get-Location).Path
     $available = @()
     foreach ($code in $settings.SourceTypes) {
         $c = $code.ToUpperInvariant()
@@ -266,28 +262,6 @@ function Add-HostFolderToUserPath {
 # endregion Helpers
 
 # region Core actions
-function Set-WorkingFolder {
-    param([ref]$settings)
-    Clear-Host
-    Show-Header -settings $settings.Value
-    $current = $settings.Value.WorkingFolder
-    Write-Host "Current working folder: $current" -ForegroundColor Cyan
-    $inputPath = Read-Host 'Enter new working folder path (leave blank to keep current, type . to set to active folder)'
-    if ([string]::IsNullOrWhiteSpace($inputPath)) { return $true }
-    $resolved = Resolve-Path -LiteralPath $inputPath -ErrorAction SilentlyContinue
-    if (-not $resolved) {
-        $create = Read-Host 'Path does not exist. Create it? (y/n)'
-        if ($create -match '^(y|yes)$') {
-            New-Item -Path $inputPath -ItemType Directory -Force | Out-Null
-            $resolved = Resolve-Path -LiteralPath $inputPath
-        }
-        else { return $false }
-    }
-    $settings.Value.WorkingFolder = $resolved.Path
-    Set-Settings $settings.Value
-    Write-Host "Working folder set to: $($settings.Value.WorkingFolder)" -ForegroundColor Green
-    return $true
-}
 
 function Set-SourceTypes {
     param([ref]$settings)
@@ -344,7 +318,8 @@ function Show-ObjectIdSummary {
     Show-Header -settings $settings
     $available = Get-AvailableSourceFiles -settings $settings
     if (-not $available -or $available.Count -eq 0) {
-        Write-Warning ("No source files found in working folder: " + $settings.WorkingFolder)
+    $wf = (Get-Location).Path
+    Write-Warning ("No source files found in working folder: " + $wf)
         return
     }
 
@@ -406,7 +381,7 @@ function Invoke-PrepareSplits {
         return
     }
 
-    $root = $settings.WorkingFolder
+    $root = (Get-Location).Path
     New-DirectoryIfMissing $root
     $foundAny = $false
     foreach ($code in $settings.SourceTypes) {
@@ -467,7 +442,7 @@ function Invoke-MergeFiles {
         return
     }
 
-    $root = $settings.WorkingFolder
+    $root = (Get-Location).Path
     foreach ($code in $settings.SourceTypes) {
         $c = $code.ToUpperInvariant()
         $mrgDir = Join-Path $root ("MRG2$c")
@@ -503,7 +478,8 @@ function Show-Header {
     Write-Host '==============================================='
     Write-Host ' NAV Source Handler — Split/Merge Tool'
     Write-Host '==============================================='
-    Write-Host (" Working: " + $settings.WorkingFolder) -ForegroundColor Cyan
+    $wf = (Get-Location).Path
+    Write-Host (" Working: " + $wf) -ForegroundColor Cyan
     Write-Host (" Sources: " + ($settings.SourceTypes -join ', ')) -ForegroundColor Cyan
 }
 
@@ -520,16 +496,17 @@ function Invoke-Menu {
         $hostFolder = $PSScriptRoot
         $offerAddPath = -not (Test-PathInPathValue -path $hostFolder -pathValue $env:Path)
 
-        Write-Host '1) Set working folder'
-        Write-Host '2) Manage source types'
-        Write-Host '3) Inspect source IDs (pipe-per-type)'
-        Write-Host '4) Prepare (split + seed merge folders)'
-        Write-Host '5) Merge (MRG2<CODE>/*.txt -> MRG2<CODE>.txt)'
-        if ($offerAddPath) { Write-Host '6) Add host folder to path' }
-
+        # Dynamic menu with 1-based numbering, 0 reserved for exit
+        $i = 1
+        Write-Host ("$i) Inspect source IDs (pipe-per-type)"); $optInspect = "$i"; $i++
+        Write-Host ("$i) Prepare (split + seed merge folders)"); $optPrepare = "$i"; $i++
+        Write-Host ("$i) Merge (MRG2<CODE>/*.txt -> MRG2<CODE>.txt)"); $optMerge = "$i"; $i++
+        if ($offerAddPath) { Write-Host ("$i) Add host folder to path"); $optAddPath = "$i"; $i++ }
         if ($script:GitAvailable -and $script:GitUpdateAvailable) {
-            Write-Host ("7) Pull latest update from origin/" + $script:GitBranch + " (" + $script:GitBehindCount + " commit(s) behind)") -ForegroundColor Yellow
+            Write-Host ("$i) Pull latest update from origin/" + $script:GitBranch + " (" + $script:GitBehindCount + " commit(s) behind)") -ForegroundColor Yellow
+            $optPull = "$i"; $i++
         }
+        Write-Host ("$i) Manage source types"); $optManage = "$i"; $i++
         Write-Host '0) Exit'
 
         try {
@@ -540,19 +517,14 @@ function Invoke-Menu {
             break
         }
         switch ($sel) {
-            '1' { $changed = Set-WorkingFolder -settings ([ref]$settings); if ($changed) { $skipPause = $true } }
-            '2' { $changed = Set-SourceTypes -settings ([ref]$settings); if ($changed) { $skipPause = $true } }
-            '3' { Show-ObjectIdSummary -settings $settings }
-            '4' { Invoke-PrepareSplits -settings $settings }
-            '5' { Invoke-MergeFiles -settings $settings }
-            '6' {
-                if ($offerAddPath) {
-                    Add-HostFolderToUserPath -hostFolder $hostFolder
-                } else {
-                    Write-Host 'Invalid choice.' -ForegroundColor Yellow
-                }
+            ($optManage) { $changed = Set-SourceTypes -settings ([ref]$settings); if ($changed) { $skipPause = $true } }
+            ($optInspect) { Show-ObjectIdSummary -settings $settings }
+            ($optPrepare) { Invoke-PrepareSplits -settings $settings }
+            ($optMerge) { Invoke-MergeFiles -settings $settings }
+            ($optAddPath) {
+                if ($offerAddPath) { Add-HostFolderToUserPath -hostFolder $hostFolder } else { Write-Host 'Invalid choice.' -ForegroundColor Yellow }
             }
-            '7' {
+            ($optPull) {
                 if ($script:GitAvailable -and $script:GitUpdateAvailable) {
                     Write-Host ("Pulling latest updates from origin/" + $script:GitBranch + "...")
                     git -C "$PSScriptRoot" pull origin $script:GitBranch
@@ -579,7 +551,5 @@ function Invoke-Menu {
 }
 # endregion Menu
 
-# Entry point
-if ($Menu -and ($MyInvocation.InvocationName -ne '.')) {
-    try { Invoke-Menu } catch { Write-Error $_ }
-}
+# Entry point — always run the menu
+try { Invoke-Menu } catch { Write-Error $_ }

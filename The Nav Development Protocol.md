@@ -20,7 +20,7 @@ Each development burst must end with you gathering all the objects that you modi
 
 For instance. You have a Projects folder containing Customer folders. Each customer has its own folder. Each task for this customer has its own folder within the customer folder.
 
-You start developing an Item Card customization on March 1st 2028. In your customer folder you will create a task folder named  - `TaskId - Item Card Customization` (where TaskID should be the actual identifier). In this folder yopu will create a subfolder named `_code`. The task might require other subfolders, for documentation and such, so this structure lets you keep the code tidy and separate. The naming conventions you will use may vary to suit your preferences, but the folder structure should be followed.
+You start developing an Item Card customization on March 1st 2028. In your customer folder you will create a task folder named  - `TaskId - Item Card Customization` (where TaskID should be the actual identifier). In this folder you will create a subfolder named `_code`. The task might require other subfolders, for documentation and such, so this structure lets you keep the code tidy and separate. The naming conventions you will use may vary to suit your preferences, but the folder structure should be followed.
 
 In `_code `you create a subfolder per each development burst. Your first subfolder will therefore be named `280301`. When you are ready to round up your first burst, you will save the modified objects in a file named `DEV.txt`.
 
@@ -50,7 +50,7 @@ Open the target environment, apply the filters you prepared, mark the objects, a
 
 Use the Nav development cmdlets in Powershell (`Split-NAVApplicationObjectFile`) to split the objects into another level of subfolders. You will need a subfolder for the original objects per each environment. In this instance you will create subfolders in `280315` named `DEV` and `TST`, if you are deploying to a test environment. Make a copy of each original object subfolder, `DEV` to `DEV2MRG`, `TST` to `TST2MRG`. You will use `*2MRG` folders to actually compare objects and merge the changes.
 
-Compare an merge as necessary.
+Compare and merge as necessary.
 
 Use the Nav development cmdlets in Powershell (`Join-NAVApplicationObjectFile`) to build a txt object package from the merge folder, in this instance `TST2MRG`, and save it in a new file named `TST2MRG.txt`.
 
