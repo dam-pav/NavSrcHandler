@@ -195,7 +195,7 @@ function Get-AvailableSourceFiles {
 }
 
 # Normalize a path segment for comparison (trim quotes/whitespace and trailing separators)
-function Normalize-PathSegment([string]$segment) {
+function Format-PathSegment([string]$segment) {
     if ($null -eq $segment) { return '' }
     $s = $segment.Trim().Trim('"')
     # Remove trailing backslashes/slashes
@@ -210,10 +210,10 @@ function Test-PathInPathValue {
         [string]$pathValue
     )
     if ([string]::IsNullOrWhiteSpace($pathValue)) { return $false }
-    $needle = Normalize-PathSegment $path
+    $needle = Format-PathSegment $path
     if ([string]::IsNullOrWhiteSpace($needle)) { return $false }
     foreach ($seg in ($pathValue -split ';')) {
-        $candidate = Normalize-PathSegment $seg
+    $candidate = Format-PathSegment $seg
         if ([string]::IsNullOrWhiteSpace($candidate)) { continue }
         if ($candidate.Equals($needle, [System.StringComparison]::OrdinalIgnoreCase)) { return $true }
     }
@@ -243,7 +243,7 @@ function Add-HostFolderToUserPath {
     }
 
     $currentUserPath = [System.Environment]::GetEnvironmentVariable('Path', [System.EnvironmentVariableTarget]::User)
-    $normalizedHost = Normalize-PathSegment $hostFolder
+    $normalizedHost = Format-PathSegment $hostFolder
     $newUserPath = if ([string]::IsNullOrWhiteSpace($currentUserPath)) { $normalizedHost } else { ($currentUserPath.TrimEnd(';') + ';' + $normalizedHost) }
 
     try {
@@ -496,6 +496,14 @@ function Invoke-Menu {
         $hostFolder = $PSScriptRoot
         $offerAddPath = -not (Test-PathInPathValue -path $hostFolder -pathValue $env:Path)
 
+    # Initialize option variables to avoid StrictMode errors when options are conditionally shown
+    $optInspect = $null
+    $optPrepare = $null
+    $optMerge   = $null
+    $optAddPath = $null
+    $optPull    = $null
+    $optManage  = $null
+
         # Dynamic menu with 1-based numbering, 0 reserved for exit
         $i = 1
         Write-Host ("$i) Inspect source IDs (pipe-per-type)"); $optInspect = "$i"; $i++
@@ -516,6 +524,7 @@ function Invoke-Menu {
             Write-Host 'Interactive input is not available. Please run this script in a terminal (e.g., VS Code Terminal) to use the menu.' -ForegroundColor Yellow
             break
         }
+
         switch ($sel) {
             ($optManage) { $changed = Set-SourceTypes -settings ([ref]$settings); if ($changed) { $skipPause = $true } }
             ($optInspect) { Show-ObjectIdSummary -settings $settings }
