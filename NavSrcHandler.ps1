@@ -506,15 +506,17 @@ function Invoke-Menu {
 
         # Dynamic menu with 1-based numbering, 0 reserved for exit
         $i = 1
-        Write-Host ("$i) Inspect source IDs (pipe-per-type)"); $optInspect = "$i"; $i++
-        Write-Host ("$i) Prepare (split + seed merge folders)"); $optPrepare = "$i"; $i++
-        Write-Host ("$i) Merge (MRG2<CODE>/*.txt -> MRG2<CODE>.txt)"); $optMerge = "$i"; $i++
+        if (-not $offerAddPath) {
+            Write-Host ("$i) Inspect source IDs (pipe-per-type)"); $optInspect = "$i"; $i++
+            Write-Host ("$i) Prepare (split + seed merge folders)"); $optPrepare = "$i"; $i++
+            Write-Host ("$i) Merge (MRG2<CODE>/*.txt -> MRG2<CODE>.txt)"); $optMerge = "$i"; $i++
+            Write-Host ("$i) Manage source types"); $optManage = "$i"; $i++
+        }
         if ($offerAddPath) { Write-Host ("$i) Add host folder to path"); $optAddPath = "$i"; $i++ }
         if ($script:GitAvailable -and $script:GitUpdateAvailable) {
             Write-Host ("$i) Pull latest update from origin/" + $script:GitBranch + " (" + $script:GitBehindCount + " commit(s) behind)") -ForegroundColor Yellow
             $optPull = "$i"; $i++
         }
-        Write-Host ("$i) Manage source types"); $optManage = "$i"; $i++
         Write-Host '0) Exit'
 
         try {

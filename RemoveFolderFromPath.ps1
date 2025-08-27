@@ -1,5 +1,5 @@
 
-$target = "c:\NavSrcHandler"
+$target = $PSScriptRoot
 Write-Host "Checking for target folder in PATH: $target" -ForegroundColor Cyan
 $rawPath = [Environment]::GetEnvironmentVariable("Path", "User")
 $oldPath = $rawPath -split ';'

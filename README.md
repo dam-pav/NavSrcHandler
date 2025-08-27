@@ -26,16 +26,16 @@ Tip: Start a “Microsoft Dynamics NAV/Business Central Development Shell” or 
 
 Choose a folder to host the script and download the ps1 and cmd files. You may want to copy this README.md file as well, for future reference. If you clone the complete repository you can take advantage of keeping up to date almost automatically.
 
-### From the repository folder:
-
-```powershell
-# Run the interactive tool
-./NavSrcHandler.ps1
-```
-
 ### Add the hosting folder to environment paths
 
-If the path is not yet part of environment, the menu will show a sixth option. Simply select the option.
+The first time you will need to run the tool directly from the host folder.
+
+```
+# Run the interactive tool
+NavSrcHandler.cmd
+```
+
+If the path is not yet part of environment, the menu will show an option to apply the required change. Simply select the option.
 
 ### Removing the tool
 
