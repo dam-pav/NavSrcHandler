@@ -46,24 +46,24 @@ If you find this tool is not what you want you will want to remove it.
 
 ## Usage (Menu)
 
-1. Manage source types
-   - Add or remove 3-letter codes (e.g., `PRD`, `DLY`, `DEV`, `TST`, `BSE`).
-   - Saved in `settings.json`.
-2. Inspect source IDs (pipe-per-type)
-
-- Lists only the source codes for which `<CODE>.txt` exists in the current working folder.
-- After you pick a source, parses the file and prints one line per object type with IDs pipe-separated, e.g. `Table: 18|27|36`.
-
-3. Prepare (split + seed merge folders)
+1. Inspect source IDs (pipe-per-type)
+   - Lists only the source codes for which `<CODE>.txt` exists in the current working folder.
+   - After you pick a source, parses the file and prints one line per object type with IDs pipe-separated, e.g. `Table: 18|27|36`.
+2. Prepare (split + seed merge folders)
    - For each selected code `XXX`:
      - Split `XXX.txt` into `./XXX/` using `Split-NAVApplicationObjectFile`.
      - Copy contents to `./MRG2XXX/`.
-4. Merge (MRG2 `<CODE>`/*.txt -> MRG2 `<CODE>`.txt)
+3. Merge (MRG2 `<CODE>`/*.txt -> MRG2 `<CODE>`.txt)
    - For each selected code `XXX`, join files in `./MRG2XXX/` to `./MRG2XXX.txt` using `Join-NAVApplicationObjectFile`.
+4. Manage source types
+   - Add or remove 3-letter codes (e.g., `PRD`, `DLY`, `DEV`, `TST`, `BSE`).
+   - Saved in `settings.json`.
 5. Add host folder to PATH (conditional)
-
-- Appears only when the script's folder isn't already on PATH.
-- Adds the folder to the User PATH and updates the current session PATH for immediate use.
+   - Appears only when the script's folder isn't already on PATH.
+   - Adds the folder to the User PATH and updates the current session PATH for immediate use.
+6. Pull latest update from origin (conditional)
+   - Appears when new commits are detected.
+   - Executes git pull until the folder is up to date.
 
 ## Settings & Persistence
 
