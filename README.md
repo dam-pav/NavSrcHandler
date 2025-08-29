@@ -10,6 +10,7 @@ An interactive PowerShell helper that prepares and merges Microsoft Dynamics NAV
 - Merge: join `<WORKING>/MRG2<CODE>/*.txt` into `<WORKING>/MRG2<CODE>.txt`
 - Menu-driven, settings saved to `settings.json` (JSON content). The file is created on first change.
 - Conditional utility: add the script's host folder to the User PATH (shows only if it's not already on PATH)
+- Conditional utility: update the tool if git shows the origin to be ahead
 
 ## Requirements
 
@@ -20,7 +21,7 @@ An interactive PowerShell helper that prepares and merges Microsoft Dynamics NAV
 
 On start, the tool attempts to initialize NAV/BC Dev Shell cmdlets automatically. If not found, it will warn you to run in the Dev Shell or import the module `Microsoft.Dynamics.Nav.Model.Tools`.
 
-Tip: Start a “Microsoft Dynamics NAV/Business Central Development Shell” or import the relevant module so these commands exist.
+> Tip: Start a “Microsoft Dynamics NAV/Business Central Development Shell” or import the relevant module so these commands exist.
 
 ## Getting Started
 
