@@ -26,6 +26,36 @@ In `_code `you create a subfolder per each development session. Your first subfo
 
 The next day you return to the task at hand. Create a new subfolder in `_code` named `280302`. At the end of the day save the modified objects in this new folder, again in a file named `DEV.txt`.
 
+Typical folder structure:
+
+> - Projects
+>   
+>   - Customer 1
+>     
+>     - TaskId01 - task 1 description
+>       
+>       - _code
+>         
+>         - 280301
+>         
+>         - 280302
+>         
+>         - 280305
+>         
+>         - 280315
+>       
+>       - API specs
+>       
+>       - data samples
+>     
+>     - TaskId02 - task 2 description
+>       
+>       - ...
+>   
+>   - Customer 2
+>     
+>     - ...
+
 By doing this after each session, you are making sure that:
 
 - you can keep track of what you did during each session
