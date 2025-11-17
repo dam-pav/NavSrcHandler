@@ -367,8 +367,35 @@ function Show-ObjectIdSummary {
 
     foreach ($type in ($map.Keys | Sort-Object)) {
         $ids = $map[$type] | Sort-Object
-        $pipe = ($ids -join '|')
-        Write-Host ("  {0}: {1}" -f $type, $pipe)
+            # Helper: Convert sorted array of ints to range string (e.g., '2..6,8..11,15')
+            function Convert-IdsToRanges([int[]]$arr) {
+                if (-not $arr -or $arr.Count -eq 0) { return '' }
+                $result = @()
+                $start = $arr[0]
+                $end = $arr[0]
+                for ($i = 1; $i -lt $arr.Count; $i++) {
+                    if ($arr[$i] -eq $end + 1) {
+                        $end = $arr[$i]
+                    } else {
+                        if ($end - $start -ge 2) {
+                            $result += "$start..$end"
+                        } else {
+                            for ($j = $start; $j -le $end; $j++) { $result += "$j" }
+                        }
+                        $start = $arr[$i]
+                        $end = $arr[$i]
+                    }
+                }
+                # Handle last range
+                if ($end - $start -ge 2) {
+                    $result += "$start..$end"
+                } else {
+                    for ($j = $start; $j -le $end; $j++) { $result += "$j" }
+                }
+                return ($result -join '|')
+            }
+            $rangeStr = Convert-IdsToRanges $ids
+            Write-Host ("  {0}: {1}" -f $type, $rangeStr)
     }
 }
 
