@@ -1,4 +1,4 @@
-# NavSrcHandler.ps1 — Interactive NAV object split/merge helper with persisted settings
+# NavSrcHandler.ps1 - Interactive NAV object split/merge helper with persisted settings
 
 <#
   Features
@@ -18,11 +18,20 @@
   - If NAV cmdlets are not available, the tool will warn and skip split/merge.
 #>
 
-param()
+param(
+    [Parameter(Position=0)]
+    [string]$TargetFolder
+)
 
 
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
+
+if ([string]::IsNullOrWhiteSpace($TargetFolder)) {
+    $script:WorkingFolder = (Get-Location).Path
+} else {
+    $script:WorkingFolder = [System.IO.Path]::GetFullPath($TargetFolder)
+}
 
 # region Git update check (run once at script start)
 $script:GitAvailable = $false
@@ -59,6 +68,7 @@ $script:SettingsPath = Join-Path $PSScriptRoot 'settings.json'   # JSON settings
 function New-DefaultSettings {
     [pscustomobject]@{
         SourceTypes = @('DLY','PRD','DEV','TST','BSE')
+        NavModelToolsPath = $null
     }
 }
 
@@ -68,8 +78,16 @@ function Get-Settings {
             $raw = Get-Content -LiteralPath $script:SettingsPath -Raw -ErrorAction Stop
             if ([string]::IsNullOrWhiteSpace($raw)) { return New-DefaultSettings }
             $obj = $raw | ConvertFrom-Json -ErrorAction Stop
-            # Ensure mandatory fields
-            if (-not $obj.SourceTypes) { $obj.SourceTypes = @('DLY','PRD','DEV','TST','BSE') }
+            # Ensure mandatory fields exist and are valid
+            if (-not $obj.PSObject.Properties['SourceTypes'] -or $null -eq $obj.SourceTypes) { 
+                $obj | Add-Member -MemberType NoteProperty -Name 'SourceTypes' -Value @('DLY','PRD','DEV','TST','BSE') -Force
+            } else {
+                # Ensure SourceTypes is always an array (even if single item)
+                $obj.SourceTypes = @($obj.SourceTypes)
+            }
+            if (-not $obj.PSObject.Properties['NavModelToolsPath']) {
+                $obj | Add-Member -MemberType NoteProperty -Name 'NavModelToolsPath' -Value $null
+            }
             return [pscustomobject]$obj
         }
         catch {
@@ -108,10 +126,35 @@ function Test-NavCmdlets {
 }
 
 function Import-NavCmdlets {
+    param([string]$preferredPath)
+
     if (Test-NavCmdlets) { return $true }
     $loaded = $false
 
-    # Try module by name first
+    # 1. Try preferred path if provided
+    if (-not [string]::IsNullOrWhiteSpace($preferredPath) -and (Test-Path -LiteralPath $preferredPath)) {
+        try {
+            if ($preferredPath.EndsWith('.ps1')) {
+                . $preferredPath
+            } else {
+                try {
+                    Import-Module -LiteralPath $preferredPath -ErrorAction Stop
+                } catch {
+                    # Fallback if LiteralPath fails (e.g. some pwsh/module compat issues)
+                    Import-Module -Name $preferredPath -ErrorAction Stop
+                }
+            }
+            if (Test-NavCmdlets) { 
+                $loaded = $true 
+                Write-Host "Loaded preferred NAV tools from: $preferredPath" -ForegroundColor Green
+                return $true
+            }
+        } catch {
+            Write-Warning "Failed to import preferred tools from '$preferredPath': $($_.Exception.Message)"
+        }
+    }
+
+    # 2. Try module by name first
     try {
         Import-Module -Name 'Microsoft.Dynamics.Nav.Model.Tools' -ErrorAction Stop
         if (Test-NavCmdlets) { $loaded = $true }
@@ -158,13 +201,13 @@ function Import-NavCmdlets {
 
 function Get-Choice([string]$prompt, [string[]]$options, [int]$defaultIndex = 0) {
     Write-Host ''
-    for ($i=0; $i -lt $options.Count; $i++) {
+    for ($i=0; $i -lt $options.Length; $i++) {
         $marker = if ($i -eq $defaultIndex) { '*' } else { ' ' }
         Write-Host ("  [{0}] {1} {2}" -f $i, $options[$i], $marker)
     }
-    $sel = Read-Host "$prompt (0..$($options.Count-1))"
+    $sel = Read-Host "$prompt (0..$($options.Length-1))"
     if ([string]::IsNullOrWhiteSpace($sel)) { return $defaultIndex }
-    if ($sel -as [int] -ge 0 -and $sel -as [int] -lt $options.Count) { return [int]$sel }
+    if ($sel -as [int] -ge 0 -and $sel -as [int] -lt $options.Length) { return [int]$sel }
     Write-Host 'Invalid selection.' -ForegroundColor Yellow
     return $defaultIndex
 }
@@ -182,7 +225,7 @@ function Get-ExistingTxt([string]$folder, [string]$pattern) {
 # Return list of available source files based on current settings (only those that exist)
 function Get-AvailableSourceFiles {
     param([object]$settings)
-    $root = (Get-Location).Path
+    $root = $script:WorkingFolder
     $available = @()
     foreach ($code in $settings.SourceTypes) {
         $c = $code.ToUpperInvariant()
@@ -213,7 +256,7 @@ function Test-PathInPathValue {
     $needle = Format-PathSegment $path
     if ([string]::IsNullOrWhiteSpace($needle)) { return $false }
     foreach ($seg in ($pathValue -split ';')) {
-    $candidate = Format-PathSegment $seg
+        $candidate = Format-PathSegment $seg
         if ([string]::IsNullOrWhiteSpace($candidate)) { continue }
         if ($candidate.Equals($needle, [System.StringComparison]::OrdinalIgnoreCase)) { return $true }
     }
@@ -258,6 +301,34 @@ function Add-HostFolderToUserPath {
     catch {
         Write-Warning ('Failed to update User PATH: ' + $_.Exception.Message)
     }
+}
+
+# Helper: Convert sorted array of ints to range string (e.g., '2..6,8..11,15')
+function Convert-IdsToRanges([int[]]$arr) {
+    if (-not $arr -or $arr.Length -eq 0) { return '' }
+    $result = @()
+    $start = $arr[0]
+    $end = $arr[0]
+    for ($i = 1; $i -lt $arr.Length; $i++) {
+        if ($arr[$i] -eq $end + 1) {
+            $end = $arr[$i]
+        } else {
+            if ($end - $start -ge 2) {
+                $result += "$start..$end"
+            } else {
+                for ($j = $start; $j -le $end; $j++) { $result += "$j" }
+            }
+            $start = $arr[$i]
+            $end = $arr[$i]
+        }
+    }
+    # Handle last range
+    if ($end - $start -ge 2) {
+        $result += "$start..$end"
+    } else {
+        for ($j = $start; $j -le $end; $j++) { $result += "$j" }
+    }
+    return ($result -join '|')
 }
 # endregion Helpers
 
@@ -306,7 +377,7 @@ function Set-SourceTypes {
         }
     }
 
-    if ($codes.Count -eq 0) { Write-Host 'No codes selected, keeping previous.' -ForegroundColor Yellow; return $true }
+    if ($codes.Length -eq 0) { Write-Host 'No codes selected, keeping previous.' -ForegroundColor Yellow; return $true }
     $settings.Value.SourceTypes = @($codes | Sort-Object -Unique)
     Set-Settings $settings.Value
     return $true
@@ -316,23 +387,23 @@ function Show-ObjectIdSummary {
     param([object]$settings)
     Clear-Host
     Show-Header -settings $settings
-    $available = Get-AvailableSourceFiles -settings $settings
-    if (-not $available -or $available.Count -eq 0) {
-    $wf = (Get-Location).Path
-    Write-Warning ("No source files found in working folder: " + $wf)
+    $available = @(Get-AvailableSourceFiles -settings $settings)
+    if ($available.Length -eq 0) {
+        $wf = $script:WorkingFolder
+        Write-Warning ("No source files found in working folder: " + $wf)
         return
     }
 
     $options = @()
     foreach ($item in $available) { $options += $item.Code }
-    for ($i=0; $i -lt $options.Count; $i++) {
+    for ($i=0; $i -lt $options.Length; $i++) {
         Write-Host ("{0}) {1}" -f ($i+1), $options[$i])
     }
     Write-Host '0) Return'
     $choice = Read-Host 'Select a source'
     if ($choice -eq '0') { return }
     $index = ($choice -as [int]) - 1
-    if ($index -lt 0 -or $index -ge $options.Count) {
+    if ($index -lt 0 -or $index -ge $options.Length) {
         Write-Host 'Invalid selection.' -ForegroundColor Yellow
         return
     }
@@ -360,42 +431,15 @@ function Show-ObjectIdSummary {
         return
     }
 
-    if ($map.Keys.Count -eq 0) {
+    if (@($map.Keys).Length -eq 0) {
         Write-Host ("No OBJECT headers found in " + $selection.Path) -ForegroundColor Yellow
         return
     }
 
     foreach ($type in ($map.Keys | Sort-Object)) {
         $ids = $map[$type] | Sort-Object
-            # Helper: Convert sorted array of ints to range string (e.g., '2..6,8..11,15')
-            function Convert-IdsToRanges([int[]]$arr) {
-                if (-not $arr -or $arr.Count -eq 0) { return '' }
-                $result = @()
-                $start = $arr[0]
-                $end = $arr[0]
-                for ($i = 1; $i -lt $arr.Count; $i++) {
-                    if ($arr[$i] -eq $end + 1) {
-                        $end = $arr[$i]
-                    } else {
-                        if ($end - $start -ge 2) {
-                            $result += "$start..$end"
-                        } else {
-                            for ($j = $start; $j -le $end; $j++) { $result += "$j" }
-                        }
-                        $start = $arr[$i]
-                        $end = $arr[$i]
-                    }
-                }
-                # Handle last range
-                if ($end - $start -ge 2) {
-                    $result += "$start..$end"
-                } else {
-                    for ($j = $start; $j -le $end; $j++) { $result += "$j" }
-                }
-                return ($result -join '|')
-            }
-            $rangeStr = Convert-IdsToRanges $ids
-            Write-Host ("  {0}: {1}" -f $type, $rangeStr)
+        $rangeStr = Convert-IdsToRanges $ids
+        Write-Host ("  {0}: {1}" -f $type, $rangeStr)
     }
 }
 
@@ -408,7 +452,7 @@ function Invoke-PrepareSplits {
         return
     }
 
-    $root = (Get-Location).Path
+    $root = $script:WorkingFolder
     New-DirectoryIfMissing $root
     $foundAny = $false
     foreach ($code in $settings.SourceTypes) {
@@ -423,8 +467,8 @@ function Invoke-PrepareSplits {
         Write-Host ''
         Write-Host ("Preparing " + $c) -ForegroundColor Cyan
 
-    New-DirectoryIfMissing $splitDir
-    New-DirectoryIfMissing $mrgDir
+        New-DirectoryIfMissing $splitDir
+        New-DirectoryIfMissing $mrgDir
         Clear-Directory $splitDir
         Clear-Directory $mrgDir
 
@@ -446,7 +490,7 @@ function Invoke-PrepareSplits {
                 Copy-Item -Path (Join-Path $splitDir '*') -Destination $mrgDir -Force -Recurse -ErrorAction Stop
                 Write-Host "  Seeded -> $mrgDir" -ForegroundColor Green
             } else {
-                Write-Host "  No files produced for $c — nothing to seed." -ForegroundColor Yellow
+                Write-Host "  No files produced for $c - nothing to seed." -ForegroundColor Yellow
             }
         }
         catch {
@@ -469,18 +513,18 @@ function Invoke-MergeFiles {
         return
     }
 
-    $root = (Get-Location).Path
+    $root = $script:WorkingFolder
     foreach ($code in $settings.SourceTypes) {
         $c = $code.ToUpperInvariant()
         $mrgDir = Join-Path $root ("MRG2$c")
         $out    = Join-Path $root ("MRG2$c.txt")
 
-    if (-not (Test-Path -LiteralPath $mrgDir)) { continue }
-    Write-Host ("`nMerging " + $c) -ForegroundColor Cyan
+        if (-not (Test-Path -LiteralPath $mrgDir)) { continue }
+        Write-Host ("`nMerging " + $c) -ForegroundColor Cyan
 
         $files = Get-ExistingTxt -folder $mrgDir -pattern '*.txt'
         if (-not $files) {
-            Write-Host "  No .txt files found in $mrgDir — skipping." -ForegroundColor Yellow
+            Write-Host "  No .txt files found in $mrgDir - skipping." -ForegroundColor Yellow
             continue
         }
 
@@ -503,17 +547,25 @@ function Show-Header {
     param([object]$settings)
     Write-Host ''
     Write-Host '==============================================='
-    Write-Host ' NAV Source Handler — Split/Merge Tool'
+    Write-Host ' NAV Source Handler - Split/Merge Tool'
     Write-Host '==============================================='
-    $wf = (Get-Location).Path
+    $wf = $script:WorkingFolder
     Write-Host (" Working: " + $wf) -ForegroundColor Cyan
+    $tools = if ($settings.NavModelToolsPath) { $settings.NavModelToolsPath } else { "Auto-discover" }
+    Write-Host (" Tools  : " + $tools) -ForegroundColor Cyan
     Write-Host (" Sources: " + ($settings.SourceTypes -join ', ')) -ForegroundColor Cyan
+    
+    # Warning if not running PowerShell 5.1
+    if ($PSVersionTable.PSVersion.Major -ne 5 -or $PSVersionTable.PSVersion.Minor -ne 1) {
+        Write-Host ''
+        Write-Host ' WARNING: Not running PowerShell 5.1 - split output may have incorrect encoding!' -ForegroundColor Red
+    }
 }
 
 function Invoke-Menu {
     $settings = Get-Settings
     # Attempt to initialize NAV cmdlets once at startup
-    Import-NavCmdlets | Out-Null
+    Import-NavCmdlets -preferredPath $settings.NavModelToolsPath | Out-Null
 
     while ($true) {
         Clear-Host
@@ -523,13 +575,14 @@ function Invoke-Menu {
         $hostFolder = $PSScriptRoot
         $offerAddPath = -not (Test-PathInPathValue -path $hostFolder -pathValue $env:Path)
 
-    # Initialize option variables to avoid StrictMode errors when options are conditionally shown
-    $optInspect = $null
-    $optPrepare = $null
-    $optMerge   = $null
-    $optAddPath = $null
-    $optPull    = $null
-    $optManage  = $null
+        # Initialize option variables to avoid StrictMode errors when options are conditionally shown
+        $optInspect = $null
+        $optPrepare = $null
+        $optMerge   = $null
+        $optAddPath = $null
+        $optPull    = $null
+        $optManage  = $null
+        $optTools   = $null
 
         # Dynamic menu with 1-based numbering, 0 reserved for exit
         $i = 1
@@ -538,6 +591,7 @@ function Invoke-Menu {
             Write-Host ("$i) Prepare (split + seed merge folders)"); $optPrepare = "$i"; $i++
             Write-Host ("$i) Merge (MRG2<CODE>/*.txt -> MRG2<CODE>.txt)"); $optMerge = "$i"; $i++
             Write-Host ("$i) Manage source types"); $optManage = "$i"; $i++
+            Write-Host ("$i) Select NAV Model Tools"); $optTools = "$i"; $i++
         }
         if ($offerAddPath) { Write-Host ("$i) Add host folder to path"); $optAddPath = "$i"; $i++ }
         if ($script:GitAvailable -and $script:GitUpdateAvailable) {
@@ -559,6 +613,14 @@ function Invoke-Menu {
             ($optInspect) { Show-ObjectIdSummary -settings $settings }
             ($optPrepare) { Invoke-PrepareSplits -settings $settings }
             ($optMerge) { Invoke-MergeFiles -settings $settings }
+            ($optTools)   { 
+                $changed = Select-NavModelTools -settings ([ref]$settings)
+                if ($changed) { 
+                    # Re-import with new selection
+                    Import-NavCmdlets -preferredPath $settings.NavModelToolsPath | Out-Null
+                    $skipPause = $true 
+                } 
+            }
             ($optAddPath) {
                 if ($offerAddPath) { Add-HostFolderToUserPath -hostFolder $hostFolder } else { Write-Host 'Invalid choice.' -ForegroundColor Yellow }
             }
@@ -589,5 +651,71 @@ function Invoke-Menu {
 }
 # endregion Menu
 
-# Entry point — always run the menu
+function Select-NavModelTools {
+    param([ref]$settings)
+    Clear-Host
+    Show-Header -settings $settings.Value
+    Write-Host ''
+    Write-Host 'Scanning for NAV/BC Model Tools...' -ForegroundColor Cyan
+
+    $candidates = @()
+    
+    # 1. Check standard paths
+    $roots = @(
+        'C:\Program Files (x86)\Microsoft Dynamics 365 Business Central',
+        'C:\Program Files\Microsoft Dynamics 365 Business Central',
+        'C:\Program Files (x86)\Microsoft Dynamics NAV',
+        'C:\Program Files\Microsoft Dynamics NAV'
+    )
+
+    foreach ($root in $roots) {
+        if (Test-Path -LiteralPath $root) {
+            # Find psd1
+            Get-ChildItem -LiteralPath $root -Filter 'Microsoft.Dynamics.Nav.Model.Tools.psd1' -Recurse -ErrorAction SilentlyContinue | ForEach-Object {
+                $candidates += $_.FullName
+            }
+            # Find NavModelTools.ps1
+            Get-ChildItem -LiteralPath $root -Filter 'NavModelTools.ps1' -Recurse -ErrorAction SilentlyContinue | ForEach-Object {
+                $candidates += $_.FullName
+            }
+        }
+    }
+
+    $candidates = $candidates | Sort-Object -Unique
+
+    if ($candidates.Length -eq 0) {
+        Write-Warning 'No NAV Model Tools found in standard locations.'
+        return $false
+    }
+
+    Write-Host 'Available Tools:'
+    for ($i=0; $i -lt $candidates.Length; $i++) {
+        $path = $candidates[$i]
+        $marker = if ($path -eq $settings.Value.NavModelToolsPath) { ' [CURRENT]' } else { '' }
+        Write-Host ("  [{0}] {1}{2}" -f $i, $path, $marker)
+    }
+    Write-Host "  [C] Clear selection (use default auto-discovery)"
+    Write-Host "  [X] Cancel"
+
+    $sel = Read-Host "Select tool version"
+    if ($sel -eq 'X' -or $sel -eq 'x') { return $false }
+    if ($sel -eq 'C' -or $sel -eq 'c') {
+        $settings.Value.NavModelToolsPath = $null
+        Set-Settings $settings.Value
+        Write-Host 'Selection cleared.' -ForegroundColor Green
+        return $true
+    }
+
+    if ($sel -match '^\d+$' -and [int]$sel -ge 0 -and [int]$sel -lt $candidates.Length) {
+        $settings.Value.NavModelToolsPath = $candidates[[int]$sel]
+        Set-Settings $settings.Value
+        Write-Host "Selected: $($settings.Value.NavModelToolsPath)" -ForegroundColor Green
+        return $true
+    }
+
+    Write-Warning 'Invalid selection.'
+    return $false
+}
+
+# Entry point - always run the menu
 try { Invoke-Menu } catch { Write-Error $_ }

@@ -14,14 +14,17 @@ An interactive PowerShell helper that prepares and merges Microsoft Dynamics NAV
 
 ## Requirements
 
-- Windows PowerShell 5.1 or PowerShell 7+ (pwsh)
-- NAV/BC PowerShell cmdlets available in the session:
+- Windows PowerShell 5.1
+  - PowerShell 7+ (pwsh) will technically work, but the output of file manipulation will most likely disrupt codepages.
+- NAV PowerShell cmdlets available in the session:
   - `Split-NAVApplicationObjectFile`
   - `Join-NAVApplicationObjectFile`
 
 On start, the tool attempts to initialize NAV/BC Dev Shell cmdlets automatically. If not found, it will warn you to run in the Dev Shell or import the module `Microsoft.Dynamics.Nav.Model.Tools`.
 
-> Tip: Start a “Microsoft Dynamics NAV/Business Central Development Shell” or import the relevant module so these commands exist.
+Make sure that you are using model tools compatible with your development environment. Module selection is integrated and persisted. Double check the encoding of output files.
+
+> Tip: Start a “Microsoft Dynamics NAV/Business Central Development Shell” or import the relevant module so these commands exist. Use "Windows Powershell" an avoid using "Powershell 7".
 
 ## Getting Started
 
@@ -45,6 +48,14 @@ If you find this tool is not what you want you will want to remove it.
 1. Clear the folder from the environment path using `RemoveFolderFromPath.ps1`.
 2. Remove the folder and its contents. That's it.
 
+### Running with a Target Folder
+
+You can pass a target folder path as an argument to process a specific directory instead of the current one:
+
+```powershell
+NavSrcHandler.cmd "C:\Projects\MyNavProject"
+```
+
 ## Usage (Menu)
 
 1. Inspect source IDs (pipe-per-type)
@@ -62,7 +73,9 @@ If you find this tool is not what you want you will want to remove it.
 5. Add host folder to PATH (conditional)
    - Appears only when the script's folder isn't already on PATH.
    - Adds the folder to the User PATH and updates the current session PATH for immediate use.
-6. Pull latest update from origin (conditional)
+6. Select NAV Model Tools
+   * Make sure the tools are compatible with your current project
+7. Pull latest update from origin (conditional)
    - Appears when new commits are detected.
    - Executes git pull until the folder is up to date.
 
@@ -92,6 +105,7 @@ Example:
 - "NAV cmdlets not found": ensure you are running in a NAV/BC Dev Shell or that the module providing `Split-NAVApplicationObjectFile` and `Join-NAVApplicationObjectFile` is imported.
 - Missing source file: the tool skips a code if `CODE.txt` isn’t present in the current working folder.
 - Permissions: run PowerShell with sufficient rights to create directories and files in the working folder where you run the tool.
+- Local characters are disrupted: make sure you are using Powershell 5.1 and select model tools compatible with your current project.
 
 ## Notes
 
