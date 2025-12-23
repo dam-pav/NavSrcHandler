@@ -19,6 +19,8 @@ An interactive PowerShell helper that prepares and merges Microsoft Dynamics NAV
 - NAV PowerShell cmdlets available in the session:
   - `Split-NAVApplicationObjectFile`
   - `Join-NAVApplicationObjectFile`
+- Git (optional):
+  - `winget install -e --id Git.Git`
 
 On start, the tool attempts to initialize NAV/BC Dev Shell cmdlets automatically. If not found, it will warn you to run in the Dev Shell or import the module `Microsoft.Dynamics.Nav.Model.Tools`.
 
@@ -31,6 +33,23 @@ Make sure that you are using model tools compatible with your development enviro
 > Tip: Start a “Microsoft Dynamics NAV/Business Central Development Shell” (also Powershell 5.1) or import the relevant module so these commands exist.Getting Started
 
 Choose a folder to host the script and download the ps1 and cmd files. You may want to copy this README.md file as well, for future reference. If you clone the complete repository you can take advantage of keeping up to date almost automatically.
+
+### Installation
+
+Using a terminal (Powershell or Cmd) navigate to a suitable local folder.
+
+If you have Git installed you simply do this:
+
+1. `git clone https://github.com/dam-pav/NavSrcHandler.git`
+2. This will create a folder named NavSrcHandler. Navigate to the new folder and run NavSrcHandler.cmd
+
+If not, you can 
+
+1. Create a new folder named NavSrcHandler and navigate to the new folder.
+2. Download as zip and extract the content into a suitable folder.
+3. Run NavSrcHandler.cmd.
+
+> Warning: without Git you are missing out on automatic updates.
 
 ### Add the hosting folder to environment paths
 
