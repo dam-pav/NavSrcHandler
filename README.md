@@ -15,7 +15,7 @@ An interactive PowerShell helper that prepares and merges Microsoft Dynamics NAV
 ## Requirements
 
 - Windows PowerShell 5.1
-  - PowerShell 7+ (pwsh) will technically work, but the output of file manipulation will most likely disrupt codepages.
+  - PowerShell 7+ (pwsh) will technically work and NavSrcHandler.cmd will attempt to mitigate by running a separate session for the tool. This is invisible to the user. If you don't get a warning about Powershell version, you are fine.
 - NAV PowerShell cmdlets available in the session:
   - `Split-NAVApplicationObjectFile`
   - `Join-NAVApplicationObjectFile`
@@ -24,9 +24,11 @@ On start, the tool attempts to initialize NAV/BC Dev Shell cmdlets automatically
 
 Make sure that you are using model tools compatible with your development environment. Module selection is integrated and persisted. Double check the encoding of output files.
 
-> Tip: Start a “Microsoft Dynamics NAV/Business Central Development Shell” or import the relevant module so these commands exist. Use "Windows Powershell" an avoid using "Powershell 7".
+> Tip: NAV Model Tools can behave differently if run from Powershell 7, leading to codepage disruption. Run NavSrcHandler.cmd rather than NavSrcHandler.ps1 directly. Or if you need to run NavSrcHandler.ps1, do it within a Powershell 5.1 terminal session.
+>
+> In Windows 11 you can select  "Windows PowerShell" from Windows menu to open a PowerShell 5.1 terminal.
 
-## Getting Started
+> Tip: Start a “Microsoft Dynamics NAV/Business Central Development Shell” (also Powershell 5.1) or import the relevant module so these commands exist.Getting Started
 
 Choose a folder to host the script and download the ps1 and cmd files. You may want to copy this README.md file as well, for future reference. If you clone the complete repository you can take advantage of keeping up to date almost automatically.
 
