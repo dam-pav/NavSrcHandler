@@ -16,7 +16,7 @@ An interactive PowerShell helper that prepares and merges Microsoft Dynamics NAV
 
 - Windows PowerShell 5.1
   - PowerShell 7+ (pwsh) will technically work and NavSrcHandler.cmd will attempt to mitigate by running a separate session for the tool. This is invisible to the user. If you don't get a warning about Powershell version, you are fine.
-- NAV PowerShell cmdlets available in the session:
+- NAV PowerShell cmdlets provided by NAV Model Tools:
   - `Split-NAVApplicationObjectFile`
   - `Join-NAVApplicationObjectFile`
 - Git (optional):
@@ -32,24 +32,24 @@ Make sure that you are using model tools compatible with your development enviro
 
 > Tip: Start a “Microsoft Dynamics NAV/Business Central Development Shell” (also Powershell 5.1) or import the relevant module so these commands exist.Getting Started
 
-Choose a folder to host the script and download the ps1 and cmd files. You may want to copy this README.md file as well, for future reference. If you clone the complete repository you can take advantage of keeping up to date almost automatically.
+## Installation
 
-### Installation
-
-Using a terminal (Powershell or Cmd) navigate to a suitable local folder.
+Using a terminal (Powershell or Cmd) create and navigate to a local folder suitable for manually managed tools. For instance, "C:\tools".
 
 If you have Git installed you simply do this:
 
 1. `git clone https://github.com/dam-pav/NavSrcHandler.git`
 2. This will create a folder named NavSrcHandler. Navigate to the new folder and run NavSrcHandler.cmd
 
-If not, you can 
+If not, you can
 
 1. Create a new folder named NavSrcHandler and navigate to the new folder.
 2. Download as zip and extract the content into a suitable folder.
 3. Run NavSrcHandler.cmd.
 
 > Warning: without Git you are missing out on automatic updates.
+
+> Tip: the clone also contains this README.md so you can use it as reference anytime.
 
 ### Add the hosting folder to environment paths
 
@@ -62,6 +62,16 @@ NavSrcHandler.cmd
 
 If the path is not yet part of environment, the menu will show an option to apply the required change. Simply select the option.
 
+### Set up
+
+#### Source types
+
+Source types define the names for the txt files that will be considered for containing the source. By default these designations are `PRD`, `DLY`, `DEV`, `TST` and `BSE`. You can add or remove names that you find convenient.
+
+#### NAV Model Tools selection
+
+By default the Model Tools will be selected by automated detection. If this works for you, you don't need any further setup. If you run into issues related to compatibility, you can select a specific version out of any that are installed at your host locally. The selection remains persistent.
+
 ### Removing the tool
 
 If you find this tool is not what you want you will want to remove it.
@@ -69,15 +79,31 @@ If you find this tool is not what you want you will want to remove it.
 1. Clear the folder from the environment path using `RemoveFolderFromPath.ps1`.
 2. Remove the folder and its contents. That's it.
 
-### Running with a Target Folder
+## Usage
 
-You can pass a target folder path as an argument to process a specific directory instead of the current one:
+> Tip: Avoid running ps1 directly even if you try to incorporate it into a broader context. Or, make sure ps1 runs in a Powershell 5.1 session.
+
+#### Running after navigation
+
+I recommend running the tool from a console. You don't need to run as administrator, not even during installation. In fact, don't - some of the settings are related to the current user profile.
+
+Navigate to the folder containing your source files (DEV.txt, TST.txt and so on). Simply run:
+
+```
+NavSrcHandler.cmd
+```
+
+Your current path in the console becomes your working path.
+
+#### Running with a Target Folder
+
+You can pass a target folder path as an argument to set a specific folder as working path instead of the current one:
 
 ```powershell
 NavSrcHandler.cmd "C:\Projects\MyNavProject"
 ```
 
-## Usage (Menu)
+### Menu options
 
 1. Inspect source IDs (pipe-per-type)
    - Lists only the source codes for which `<CODE>.txt` exists in the current working folder.
@@ -105,12 +131,14 @@ NavSrcHandler.cmd "C:\Projects\MyNavProject"
 - Settings are stored next to the script in `settings.json` (JSON content). The file is created on first change.
 - Keys:
   - `SourceTypes`: array of 3-letter codes.
+  - `NavModelToolsPath`: NAV Model Tools selection
 
 Example:
 
 ```json
 {
-  "SourceTypes": ["DLY", "PRD", "DEV", "TST", "BSE"]
+  "SourceTypes": ["DLY", "PRD", "DEV", "TST", "BSE"],
+  "NavModelToolsPath": "C:\\Program Files (x86)\\Microsoft Dynamics NAV\\110\\RoleTailored Client\\Microsoft.Dynamics.Nav.Model.Tools.psd1"
 }
 ```
 
