@@ -146,7 +146,7 @@ Example:
 
 1. Option 1 : Inspect — see object IDs per type for a selected source.
 2. Option 2: Prepare — performs splitting and seeds merge folders.
-3. Make any manual edits in `MRG2XXX/` as needed.
+3. Make any manual edits in `MRG2XXX/` as needed. Do not modify files in `XXX/` folders, keep them as backup and reference. After you complete the merge for all the objects you can compare `XXX/` and `MRG2XXX/` to get the actual changes in the code for the target environment.
 4. Option 3: Merge — produces `MRG2XXX.txt` outputs.
 
 ## Troubleshooting
