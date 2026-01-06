@@ -2,6 +2,10 @@
 
 An interactive PowerShell helper that prepares and merges Microsoft Dynamics NAV/BC application object files. The purpose of this tool is to facilitate the [Nav Development Protocol](The%20Nav%20Development%20Protocol.md).
 
+I would pay (not very much though :-) for a tool like this ten years ago. While we try and push our customers towards BC there is still a considerable number of projects running on older platforms. 
+
+Just as in space noone can hear you scream, in NAV there is no source control. The NAV Development Protocol is, aside from some more sophisticated tools of varying quality, the best workflow I was able to come up with.
+
 ## Features
 
 - Manage 3-letter source type codes (e.g., `DLY`, `PRD`, `DEV`, `TST`, `BSE`) (persisted)
